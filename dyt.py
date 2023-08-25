@@ -435,7 +435,7 @@ if __name__ == "__main__":
                     print("[ {key} ] {value} BOMB".format(key=key,
                                                           value=value))
                 print()
-                choice = input(mesgdcrt.CommandMessage("Enter Choice : "))
+   
             selectnode(mode=avail_choice[choice].lower())
         except KeyboardInterrupt:
             mesgdcrt.WarningMessage("Received INTR call - Exiting...")
