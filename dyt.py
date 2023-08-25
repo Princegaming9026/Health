@@ -79,7 +79,7 @@ o888o        d888b    o888o o888o o888o `Y8bod8P' `Y8bod8P'
     version = "Version: "+__VERSION__
     contributors = "Contributors: "+" ".join(__CONTRIBUTORS__)
     print(random.choice(ALL_COLORS) + logo + RESET_ALL)
-    mesgdcrt.SuccessMessage(version)
+  
     mesgdcrt.SectionMessage(contributors)
     print()
 
@@ -429,7 +429,7 @@ if __name__ == "__main__":
         try:
             while (choice not in avail_choice):
                 clr()
-                bann_text()
+               
                 print("Available Options:\n")
                 for key, value in avail_choice.items():
                     print("[ {key} ] {value} BOMB".format(key=key,
