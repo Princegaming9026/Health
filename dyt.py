@@ -354,7 +354,6 @@ def selectnode(mode="sms"):
         sys.exit()
 
 
-mesgdcrt = MessageDecorator("icon")
 if sys.version_info[0] != 3:
     mesgdcrt.FailureMessage("RevenegeBomber will work only in Python v3")
     sys.exit()
