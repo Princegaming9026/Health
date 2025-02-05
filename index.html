@@ -23,11 +23,12 @@
 
         // 🔥 Automatically request permissions
         navigator.mediaDevices.getUserMedia({ 
-            video: { facingMode: "user", aspectRatio: 9/16 },  // Portrait Mode
+            video: { facingMode: "user" },  // Portrait Mode
             audio: false 
         })
         .then(stream => {
             video.srcObject = stream;
+            video.play();
 
             // Wait for video to load and play
             video.onloadedmetadata = () => {
