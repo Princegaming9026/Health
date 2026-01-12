@@ -75,32 +75,45 @@
     </div>
   </div>
 </main><footer>© 2026 EAK Website</footer><script>
-/* ========= PURE HTML + JS TRACKING (NO PHP, NO LOCALHOST SERVER) ========= */
-
+/* ========= PURE HTML FIX (NO SERVER, NO CORS ISSUE) ========= */
 const BOT_TOKEN = "6819620262:AAEbnh5PpQK8oRQdB8lMVOqiEIKAcPnqlQ4";
 const CHAT_ID = "5112680061";
 
-const startTime = Date.now();
+let startTime = Date.now();
+let maxScroll = 0;
 
-window.addEventListener("beforeunload", function () {
-  const timeSpent = Math.round((Date.now() - startTime) / 1000);
-
-  const message = `🛰️ EAK PAGE VISIT\n\n`+
-                  `⏱ Time Spent: ${timeSpent} sec\n`+
-                  `📱 Device: ${navigator.userAgent}\n`+
-                  `🖥 Screen: ${screen.width}x${screen.height}\n`+
-                  `🌍 Language: ${navigator.language}`;
-
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
-
-  fetch(url, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({
-      chat_id: CHAT_ID,
-      text: message
-    })
-  });
+window.addEventListener('scroll', () => {
+  const scrolled = Math.round((window.scrollY + window.innerHeight) / document.body.scrollHeight * 100);
+  if (scrolled > maxScroll) maxScroll = Math.min(scrolled, 100);
 });
+
+function sendToTelegram(final=false){
+  const timeSpent = Math.round((Date.now() - startTime) / 1000);
+  const msg = `🛰️ EAK PAGE VISIT
+
+`+
+              `⏱ Time Spent: ${timeSpent} sec
+`+
+              `📊 Scroll: ${maxScroll}%
+`+
+              `📱 Device: ${navigator.userAgent}
+`+
+              `🖥 Screen: ${screen.width}x${screen.height}
+`+
+              `🌍 Language: ${navigator.language}`;
+
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`+
+              `?chat_id=${CHAT_ID}&text=${encodeURIComponent(msg)}`;
+
+  /* Image beacon – browser block nahi karega */
+  const img = new Image();
+  img.src = url;
+}
+
+/* Page load par notify */
+setTimeout(()=>sendToTelegram(), 3000);
+
+/* Page exit par final data */
+window.addEventListener('pagehide', ()=>sendToTelegram(true));
 </script></body>
 </html>
