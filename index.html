@@ -75,13 +75,22 @@
     </div>
   </div>
 </main><footer>© 2026 EAK Website</footer><script>
-/* ========= ACCURATE USER SESSION TRACKING ========= */
+/* ========= ADVANCED READ‑TIME & VISIBILITY TRACKING ========= */
 const BOT_TOKEN = "6819620262:AAEbnh5PpQK8oRQdB8lMVOqiEIKAcPnqlQ4";
 const CHAT_ID = "5112680061";
 
-const sessionStart = Date.now();
+let sessionStart = Date.now();
+let activeStart = Date.now();
+let totalReadTime = 0; // seconds
 let maxScroll = 0;
-let exitSent = false;
+let exited = false;
+
+// Telegram sender (CORS‑safe)
+function sendTelegram(msg){
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(msg)}`;
+  const img = new Image();
+  img.src = url;
+}
 
 // Scroll tracking
 window.addEventListener('scroll', () => {
@@ -89,58 +98,63 @@ window.addEventListener('scroll', () => {
   if (scrolled > maxScroll) maxScroll = Math.min(scrolled, 100);
 });
 
-// Reliable send (no CORS block)
-function sendTelegram(message){
-  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`+
-              `?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`;
-  const img = new Image();
-  img.src = url;
+// Device detection (best possible from browser)
+function getDeviceInfo(){
+  const ua = navigator.userAgent;
+  let device = 'Unknown';
+  if(/Android/i.test(ua)) device = 'Android Mobile';
+  else if(/iPhone|iPad/i.test(ua)) device = 'iOS Device';
+  else if(/Windows/i.test(ua)) device = 'Windows PC';
+  else if(/Mac/i.test(ua)) device = 'Mac';
+
+  return `📱 Device: ${device}
+🧩 Platform: ${navigator.platform}
+🧠 UA: ${ua}`;
 }
 
 /* 1️⃣ User entered page */
-window.addEventListener('load', () => {
-  const enterMsg = `👀 NEW USER LOOKED YOUR PAGE
-
-`+
-                   `🕒 Time: ${new Date().toLocaleString()}
-`+
-                   `📱 Device: Android / Mobile Browser`;
-  sendTelegram(enterMsg);
+window.addEventListener('load', ()=>{
+  sendTelegram(`👀 NEW USER LOOKED YOUR PAGE
+🕒 ${new Date().toLocaleString()}`);
 });
 
-/* 2️⃣ User actually left page (accurate time) */
-function userExit(){
-  if(exitSent) return;
-  exitSent = true;
+/* 2️⃣ Visibility handling (background / return) */
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden'){
+    totalReadTime += Math.round((Date.now() - activeStart)/1000);
+    sendTelegram(`⏸ USER PAGE BACKGROUND ME GAYA
+⏱ Read Time Till Now: ${totalReadTime} sec`);
+  }
+  if(document.visibilityState === 'visible'){
+    activeStart = Date.now();
+    sendTelegram(`▶ USER WAPAS PAGE PAR AAYA (FROM BACKGROUND)`);
+  }
+});
 
-  const timeSpent = Math.round((Date.now() - sessionStart) / 1000);
+/* 3️⃣ Final exit (tab close / back / app close) */
+function finalExit(){
+  if(exited) return;
+  exited = true;
 
-  const ua = navigator.userAgent;
-  const platform = navigator.platform || 'Unknown';
+  totalReadTime += Math.round((Date.now() - activeStart)/1000);
 
-  const exitMsg = `❌ USER LEFT PAGE
+  const msg = `❌ USER LEFT PAGE
 
 `+
-                  `⏱ Total Time: ${timeSpent} sec
+              `📖 Total Read Time: ${totalReadTime} sec
 `+
-                  `📊 Scroll: ${maxScroll}%
+              `📊 Scroll: ${maxScroll}%
 `+
-                  `📱 Device Info: ${ua}
+              `${getDeviceInfo()}
 `+
-                  `🧩 Platform: ${platform}
+              `🖥 Screen: ${screen.width}x${screen.height}
 `+
-                  `🖥 Screen: ${screen.width}x${screen.height}
-`+
-                  `🌍 Language: ${navigator.language}`;
+              `🌍 Language: ${navigator.language}`;
 
-  sendTelegram(exitMsg);
+  sendTelegram(msg);
 }
 
-// Background / tab close / back
-window.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') userExit();
-});
-
-window.addEventListener('pagehide', userExit);
+window.addEventListener('pagehide', finalExit);
+window.addEventListener('beforeunload', finalExit);
 </script></body>
 </html>
