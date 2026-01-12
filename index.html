@@ -75,45 +75,72 @@
     </div>
   </div>
 </main><footer>© 2026 EAK Website</footer><script>
-/* ========= PURE HTML FIX (NO SERVER, NO CORS ISSUE) ========= */
+/* ========= ACCURATE USER SESSION TRACKING ========= */
 const BOT_TOKEN = "6819620262:AAEbnh5PpQK8oRQdB8lMVOqiEIKAcPnqlQ4";
 const CHAT_ID = "5112680061";
 
-let startTime = Date.now();
+const sessionStart = Date.now();
 let maxScroll = 0;
+let exitSent = false;
 
+// Scroll tracking
 window.addEventListener('scroll', () => {
   const scrolled = Math.round((window.scrollY + window.innerHeight) / document.body.scrollHeight * 100);
   if (scrolled > maxScroll) maxScroll = Math.min(scrolled, 100);
 });
 
-function sendToTelegram(final=false){
-  const timeSpent = Math.round((Date.now() - startTime) / 1000);
-  const msg = `🛰️ EAK PAGE VISIT
-
-`+
-              `⏱ Time Spent: ${timeSpent} sec
-`+
-              `📊 Scroll: ${maxScroll}%
-`+
-              `📱 Device: ${navigator.userAgent}
-`+
-              `🖥 Screen: ${screen.width}x${screen.height}
-`+
-              `🌍 Language: ${navigator.language}`;
-
+// Reliable send (no CORS block)
+function sendTelegram(message){
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`+
-              `?chat_id=${CHAT_ID}&text=${encodeURIComponent(msg)}`;
-
-  /* Image beacon – browser block nahi karega */
+              `?chat_id=${CHAT_ID}&text=${encodeURIComponent(message)}`;
   const img = new Image();
   img.src = url;
 }
 
-/* Page load par notify */
-setTimeout(()=>sendToTelegram(), 3000);
+/* 1️⃣ User entered page */
+window.addEventListener('load', () => {
+  const enterMsg = `👀 NEW USER LOOKED YOUR PAGE
 
-/* Page exit par final data */
-window.addEventListener('pagehide', ()=>sendToTelegram(true));
+`+
+                   `🕒 Time: ${new Date().toLocaleString()}
+`+
+                   `📱 Device: Android / Mobile Browser`;
+  sendTelegram(enterMsg);
+});
+
+/* 2️⃣ User actually left page (accurate time) */
+function userExit(){
+  if(exitSent) return;
+  exitSent = true;
+
+  const timeSpent = Math.round((Date.now() - sessionStart) / 1000);
+
+  const ua = navigator.userAgent;
+  const platform = navigator.platform || 'Unknown';
+
+  const exitMsg = `❌ USER LEFT PAGE
+
+`+
+                  `⏱ Total Time: ${timeSpent} sec
+`+
+                  `📊 Scroll: ${maxScroll}%
+`+
+                  `📱 Device Info: ${ua}
+`+
+                  `🧩 Platform: ${platform}
+`+
+                  `🖥 Screen: ${screen.width}x${screen.height}
+`+
+                  `🌍 Language: ${navigator.language}`;
+
+  sendTelegram(exitMsg);
+}
+
+// Background / tab close / back
+window.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') userExit();
+});
+
+window.addEventListener('pagehide', userExit);
 </script></body>
 </html>
