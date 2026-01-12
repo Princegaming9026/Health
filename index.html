@@ -75,31 +75,41 @@
     </div>
   </div>
 </main><footer>© 2026 EAK Website</footer><script>
-/* ========= ADVANCED READ‑TIME & VISIBILITY TRACKING ========= */
+/* ========= PRO-LEVEL USER ANALYTICS (BROWSER LIMIT SAFE) ========= */
 const BOT_TOKEN = "6819620262:AAEbnh5PpQK8oRQdB8lMVOqiEIKAcPnqlQ4";
 const CHAT_ID = "5112680061";
 
 let sessionStart = Date.now();
 let activeStart = Date.now();
-let totalReadTime = 0; // seconds
-let maxScroll = 0;
+let totalReadTime = 0;
+let maxScrollOverall = 0;
+let sessionScroll = 0;
 let exited = false;
 
-// Telegram sender (CORS‑safe)
 function sendTelegram(msg){
   const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(msg)}`;
-  const img = new Image();
-  img.src = url;
+  const img = new Image(); img.src = url;
 }
 
-// Scroll tracking
-window.addEventListener('scroll', () => {
-  const scrolled = Math.round((window.scrollY + window.innerHeight) / document.body.scrollHeight * 100);
-  if (scrolled > maxScroll) maxScroll = Math.min(scrolled, 100);
+function getScrollPercent(){
+  return Math.min(100, Math.round((window.scrollY + window.innerHeight) / document.body.scrollHeight * 100));
+}
+
+window.addEventListener('scroll', ()=>{
+  const s = getScrollPercent();
+  sessionScroll = Math.max(sessionScroll, s);
+  maxScrollOverall = Math.max(maxScrollOverall, s);
 });
 
-// Device detection (best possible from browser)
-function getDeviceInfo(){
+async function getExtraDeviceInfo(){
+  let batteryInfo = 'Battery: Not supported';
+  try{
+    if(navigator.getBattery){
+      const b = await navigator.getBattery();
+      batteryInfo = `🔋 Battery: ${Math.round(b.level*100)}% ${b.charging ? '(Charging)' : ''}`;
+    }
+  }catch(e){}
+
   const ua = navigator.userAgent;
   let device = 'Unknown';
   if(/Android/i.test(ua)) device = 'Android Mobile';
@@ -109,49 +119,47 @@ function getDeviceInfo(){
 
   return `📱 Device: ${device}
 🧩 Platform: ${navigator.platform}
-🧠 UA: ${ua}`;
+🔎 UA: ${ua}
+${batteryInfo}`;
 }
 
-/* 1️⃣ User entered page */
+/* ENTRY */
 window.addEventListener('load', ()=>{
   sendTelegram(`👀 NEW USER LOOKED YOUR PAGE
 🕒 ${new Date().toLocaleString()}`);
 });
 
-/* 2️⃣ Visibility handling (background / return) */
-document.addEventListener('visibilitychange', ()=>{
+/* BACKGROUND / FOREGROUND */
+document.addEventListener('visibilitychange', async ()=>{
   if(document.visibilityState === 'hidden'){
     totalReadTime += Math.round((Date.now() - activeStart)/1000);
-    sendTelegram(`⏸ USER PAGE BACKGROUND ME GAYA
-⏱ Read Time Till Now: ${totalReadTime} sec`);
+    const info = await getExtraDeviceInfo();
+    sendTelegram(`⏸ USER BACKGROUND ME GAYA
+⏱ Read Time: ${totalReadTime} sec
+📊 Scroll This Session: ${sessionScroll}%
+${info}`);
+    sessionScroll = 0;
   }
   if(document.visibilityState === 'visible'){
     activeStart = Date.now();
-    sendTelegram(`▶ USER WAPAS PAGE PAR AAYA (FROM BACKGROUND)`);
+    sendTelegram(`▶ USER WAPAS PAGE PAR AAYA`);
   }
 });
 
-/* 3️⃣ Final exit (tab close / back / app close) */
+/* TAB CLOSE / BACK */
 function finalExit(){
   if(exited) return;
   exited = true;
-
   totalReadTime += Math.round((Date.now() - activeStart)/1000);
+  getExtraDeviceInfo().then(info=>{
+    sendTelegram(`❌ USER TAB CLOSE / EXIT
 
-  const msg = `❌ USER LEFT PAGE
-
-`+
-              `📖 Total Read Time: ${totalReadTime} sec
-`+
-              `📊 Scroll: ${maxScroll}%
-`+
-              `${getDeviceInfo()}
-`+
-              `🖥 Screen: ${screen.width}x${screen.height}
-`+
-              `🌍 Language: ${navigator.language}`;
-
-  sendTelegram(msg);
+📖 Total Read Time: ${totalReadTime} sec
+📊 Total Scroll: ${maxScrollOverall}%
+${info}
+🖥 Screen: ${screen.width}x${screen.height}
+🌍 Language: ${navigator.language}`);
+  });
 }
 
 window.addEventListener('pagehide', finalExit);
